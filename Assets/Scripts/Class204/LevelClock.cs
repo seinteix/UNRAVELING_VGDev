@@ -7,17 +7,25 @@ public class LevelClock : MonoBehaviour
     public int stage { get; private set; }
     public static event Action<int> onStageChange;
 
+    // fires once, after the teacher's walk-up, to start the skill check
+    public static event Action OnStaredownReady;
+
     // Time is measured in seconds
     [SerializeField] float stage1Duration;
     [SerializeField] float stage2Duration;
     [SerializeField] float stage3Duration;
     [SerializeField] float staredownDuration;
 
+    // how long the teacher's walk-up takes before the skill check starts
+    [SerializeField] float walkUpDuration = 3f;
+
+    private float staredownStartTime;
+    private bool staredownStarted = false;
+
     void Start()
     {
         stage = 1;
         onStageChange?.Invoke(stage);
-
     }
 
     void Update()
@@ -39,12 +47,28 @@ public class LevelClock : MonoBehaviour
             stage = 4;
             onStageChange?.Invoke(stage);
             Debug.Log("stage is " + stage);
+            staredownStartTime = Time.timeSinceLevelLoad;
         }
         if (stage < 5 && Time.timeSinceLevelLoad >= stage1Duration + stage2Duration + stage3Duration + staredownDuration)
         {
             stage = 5;
             onStageChange?.Invoke(5);
             Debug.Log("stage is " + stage);
+
+            AudioManager.instance.triggerEnd("Teacher Stare"); // End?
+            AudioManager.instance.triggerEnd("Level 01 Music");
+        }
+
+        if (stage == 4)
+        {
+            AudioManager.instance.setGlobalParameter("Teacher Stare Level", (Time.timeSinceLevelLoad - staredownStartTime) / staredownDuration);
+
+            // after the walk-up finishes, start the skill check (once)
+            if (!staredownStarted && Time.timeSinceLevelLoad - staredownStartTime >= walkUpDuration)
+            {
+                staredownStarted = true;
+                OnStaredownReady?.Invoke();
+            }
         }
     }
 }
